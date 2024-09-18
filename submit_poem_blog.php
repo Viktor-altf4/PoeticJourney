@@ -10,8 +10,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validate that all fields are filled
     if (!empty($title) && !empty($type) && !empty($content)) {
 
-        // Specify your email where the poem/blog will be sent
-        $to = "victoryankhochisambiro@gmail.com"; // Replace with your actual email address
+        
+        $to = "mali victoryankhochisambiro@gmail.com";
         $subject = "New $type Submission: $title";
 
         // Email body

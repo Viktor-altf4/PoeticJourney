@@ -1,72 +1,82 @@
 <?php
-// Check if the form has been submitted using the POST method
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+// Database connection details
+$servername = "localhost"; // Replace with your server name
+$username = "root"; // Replace with your MySQL username
+$password = ""; // Replace with your MySQL password
+$dbname = "poetry_blog_website"; // Your database name
 
-    // Sanitize and assign form inputs to variables
-    $name = htmlspecialchars(trim($_POST['name']));
-    $email = htmlspecialchars(trim($_POST['email']));
-    $message = htmlspecialchars(trim($_POST['message']));
+// Create a connection to the database
+$conn = new mysqli($servername, $username, $password, $dbname);
 
-    // Initialize an error variable
-    $errors = [];
-
-    // Validate the name
-    if (empty($name)) {
-        $errors[] = "Name is required.";
-    }
-
-    // Validate the email
-    if (empty($email)) {
-        $errors[] = "Email is required.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Invalid email format.";
-    }
-
-    // Validate the message
-    if (empty($message)) {
-        $errors[] = "Message is required.";
-    }
-
-    // Check if there are any errors
-    if (empty($errors)) {
-
-        // Specify the email recipient (your email address)
-        $to = "victoryankhochisambiro@gmail.com"; // Replace with your actual email address
-
-        // Email subject
-        $subject = "New Contact Form Submission from $name";
-
-        // Email body
-        $body = "You have received a new message from your website contact form.\n\n";
-        $body .= "Here are the details:\n";
-        $body .= "Name: $name\n";
-        $body .= "Email: $email\n\n";
-        $body .= "Message:\n$message\n";
-
-        // Email headers
-        $headers = "From: $email\r\n";
-        $headers .= "Reply-To: $email\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-
-        // Try to send the email
-        if (mail($to, $subject, $body, $headers)) {
-            // Success message if the email is sent successfully
-            echo "<p>Thank you, $name! Your message has been sent successfully.</p>";
-        } else {
-            // Error message if the mail function fails
-            echo "<p>Sorry, there was an error sending your message. Please try again later.</p>";
-        }
-
-    } else {
-        // Display validation errors
-        echo "<p>There were errors in your form submission:</p>";
-        echo "<ul>";
-        foreach ($errors as $error) {
-            echo "<li>$error</li>";
-        }
-        echo "</ul>";
-    }
-} else {
-    // If the request is not POST, show an invalid request message
-    echo "<p>Invalid request method. Please submit the form correctly.</p>";
+// Check the connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
+
+// Check if the form is submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Get the input values from the form and sanitize them
+    $title = $conn->real_escape_string($_POST['title']);
+    $type = $conn->real_escape_string($_POST['type']);
+    $content = $conn->real_escape_string($_POST['content']);
+
+    // Validate input fields
+    if (empty($title) || empty($type) || empty($content)) {
+        echo "All fields are required. Please fill out the form completely.";
+    } else {
+        // Insert the data into the database
+        $sql = "INSERT INTO submissions (title, type, content) VALUES ('$title', '$type', '$content')";
+        if ($conn->query($sql) === TRUE) {
+            // Email notification after successful submission
+
+            // Recipient email address (your email)
+            $to = "your-email@example.com"; // Replace with your email address
+
+            // Email subject
+            $subject = "New Submission: $type - $title";
+
+            // Email content in plain text and HTML formats
+            $message_plain = "You have received a new submission on your website.\n\n";
+            $message_plain .= "Title: $title\n";
+            $message_plain .= "Type: $type\n";
+            $message_plain .= "Content:\n$content\n";
+
+            $message_html = "<html><body>";
+            $message_html .= "<h1>New Submission: $type - $title</h1>";
+            $message_html .= "<p><strong>Title:</strong> $title</p>";
+            $message_html .= "<p><strong>Type:</strong> $type</p>";
+            $message_html .= "<p><strong>Content:</strong><br>$content</p>";
+            $message_html .= "</body></html>";
+
+            // Email headers
+            $headers = "From: no-reply@yourdomain.com\r\n"; // Replace with your domain's email
+            $headers .= "Reply-To: no-reply@yourdomain.com\r\n"; // Replace as needed
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: multipart/alternative; boundary=\"boundary\"\r\n";
+
+            // Define the boundary for separating plain text and HTML content
+            $boundary = md5(uniqid(time()));
+
+            // Full message body, including both plain text and HTML parts
+            $message = "--boundary\r\n";
+            $message .= "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
+            $message .= $message_plain . "\r\n";
+            $message .= "--boundary\r\n";
+            $message .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
+            $message .= $message_html . "\r\n";
+            $message .= "--boundary--\r\n";
+
+            // Send the email
+            if (mail($to, $subject, $message, $headers)) {
+                echo "Submission successful, and email notification sent!";
+            } else {
+                echo "Submission successful, but email notification could not be sent.";
+            }
+        } else {
+            echo "Error: " . $sql . "<br>" . $conn->error;
+        }
+    }
+}
+
+// Close the database connection
+$conn->close();
